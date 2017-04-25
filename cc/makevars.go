@@ -112,9 +112,9 @@ func makeVarsProvider(ctx android.MakeVarsContext) {
 
 	if config.SDClang {
 		ctx.Strict("SDCLANG", strconv.FormatBool(config.SDClang))
-		ctx.Strict("SDCLANG_PATH", "${config.SDClangBin}")
-		ctx.Strict("SDCLANG_COMMON_FLAGS", "${config.SDClangFlags}")
 	}
+	ctx.Strict("SDCLANG_PATH", "${config.SDClangBin}")
+	ctx.Strict("SDCLANG_COMMON_FLAGS", "${config.SDClangFlags}")
 }
 
 func makeVarsToolchain(ctx android.MakeVarsContext, secondPrefix string,
