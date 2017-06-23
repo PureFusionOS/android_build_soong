@@ -210,3 +210,10 @@ func replaceFirst(slice []string, from, to string) {
 	}
 	slice[0] = to
 }
+
+func replaceFirst(slice []string, from, to string) {
+	if slice[0] != from {
+		panic(fmt.Errorf("Expected %q, found %q", from, to))
+	}
+	slice[0] = to
+}
