@@ -80,6 +80,7 @@ var (
 		"-Wl,--icf=safe",
 		"-Wl,--hash-style=gnu",
 		"-Wl,--no-undefined-version",
+		"-Wl,-m,armelf",
 	}
 
 	armArmCflags = []string{
@@ -114,6 +115,11 @@ var (
 			"-mfloat-abi=softfp",
 			"-mfpu=neon",
 		},
+		"armv8-a": []string{
+			"-march=armv8-a",
+			"-mfloat-abi=softfp",
+			"-mfpu=neon-fp-armv8",
+		},
 	}
 
 	armCpuVariantCflags = map[string][]string{
@@ -122,6 +128,7 @@ var (
 		},
 		"cortex-a7": []string{
 			"-mcpu=cortex-a7",
+			"-mfpu=neon-vfpv4",
 			// Fake an ARM compiler flag as these processors support LPAE which GCC/clang
 			// don't advertise.
 			// TODO This is a hack and we need to add it for each processor that supports LPAE until some
@@ -141,7 +148,7 @@ var (
 			"-D__ARM_FEATURE_LPAE=1",
 		},
 		"cortex-a53": []string{
-			"-mcpu=cortex-a7",
+			"-mcpu=cortex-a53",
 			"-mfpu=neon-fp-armv8",
 			// Fake an ARM compiler flag as these processors support LPAE which GCC/clang
 			// don't advertise.
@@ -185,6 +192,7 @@ func init() {
 		"armv5te",
 		"armv7-a",
 		"armv7-a-neon",
+		"armv8-a",
 		"cortex-a7",
 		"cortex-a8",
 		"cortex-a9",
@@ -210,6 +218,11 @@ func init() {
 	// so override the definitions when building modules with Clang.
 	replaceFirst(armClangCpuVariantCflags["krait"], "-mcpu=cortex-a15", "-mcpu=krait")
 	replaceFirst(armClangCpuVariantCflags["kryo"], "-mcpu=cortex-a15", "-mcpu=krait")
+	// The reason we use "-march=armv8-a+crc", instead of "-march=armv8-a", for
+	// gcc is the latter would conflict with any specified/supported -mcpu!
+	// All armv8-a cores supported by gcc 4.9 support crc, so it's safe
+	// to add +crc. Besides, the use of gcc is only for legacy code.
+	replaceFirst(armArchVariantCflags["armv8-a"], "-march=armv8-a", "-march=armv8-a+crc")
 
 	if android.GetMakeVar("TARGET_ARCH", "arm") == "arm" {
 		actualArmGccVersion := android.GetMakeVar("TARGET_GCC_VERSION", armGccVersion)
@@ -253,6 +266,7 @@ func init() {
 	pctx.StaticVariable("ArmArmv5TECflags", strings.Join(armArchVariantCflags["armv5te"], " "))
 	pctx.StaticVariable("ArmArmv7ACflags", strings.Join(armArchVariantCflags["armv7-a"], " "))
 	pctx.StaticVariable("ArmArmv7ANeonCflags", strings.Join(armArchVariantCflags["armv7-a-neon"], " "))
+	pctx.StaticVariable("ArmArmv8ACflags", strings.Join(armArchVariantCflags["armv8-a"], " "))
 
 	// Cpu variant cflags
 	pctx.StaticVariable("ArmGenericCflags", strings.Join(armCpuVariantCflags[""], " "))
@@ -280,6 +294,8 @@ func init() {
 		strings.Join(armClangArchVariantCflags["armv7-a"], " "))
 	pctx.StaticVariable("ArmClangArmv7ANeonCflags",
 		strings.Join(armClangArchVariantCflags["armv7-a-neon"], " "))
+	pctx.StaticVariable("ArmClangArmv8ACflags",
+		strings.Join(armClangArchVariantCflags["armv8-a"], " "))
 
 	// Clang cpu variant cflags
 	pctx.StaticVariable("ArmClangGenericCflags",
@@ -303,6 +319,7 @@ var (
 		"armv5te":      "${config.ArmArmv5TECflags}",
 		"armv7-a":      "${config.ArmArmv7ACflags}",
 		"armv7-a-neon": "${config.ArmArmv7ANeonCflags}",
+		"armv8-a":      "${config.ArmArmv8ACflags}",
 	}
 
 	armCpuVariantCflagsVar = map[string]string{
@@ -322,6 +339,7 @@ var (
 		"armv5te":      "${config.ArmClangArmv5TECflags}",
 		"armv7-a":      "${config.ArmClangArmv7ACflags}",
 		"armv7-a-neon": "${config.ArmClangArmv7ANeonCflags}",
+		"armv8-a":      "${config.ArmClangArmv8ACflags}",
 	}
 
 	armClangCpuVariantCflagsVar = map[string]string{
@@ -436,6 +454,11 @@ func armToolchainFactory(arch android.Arch) Toolchain {
 	toolchainClangCflags[0] = "${config.ArmToolchainClangCflags}"
 	toolchainClangCflags[1] = armClangArchVariantCflagsVar[arch.ArchVariant]
 
+	toolchainCflags = append(toolchainCflags,
+		variantOrDefault(armCpuVariantCflagsVar, arch.CpuVariant))
+	toolchainClangCflags = append(toolchainClangCflags,
+		variantOrDefault(armClangCpuVariantCflagsVar, arch.CpuVariant))
+
 	switch arch.ArchVariant {
 	case "armv7-a-neon":
 		switch arch.CpuVariant {
@@ -445,15 +468,12 @@ func armToolchainFactory(arch android.Arch) Toolchain {
 		default:
 			fixCortexA8 = "-Wl,--no-fix-cortex-a8"
 		}
-
-		toolchainCflags = append(toolchainCflags,
-			variantOrDefault(armCpuVariantCflagsVar, arch.CpuVariant))
-		toolchainClangCflags = append(toolchainClangCflags,
-			variantOrDefault(armClangCpuVariantCflagsVar, arch.CpuVariant))
 	case "armv7-a":
 		fixCortexA8 = "-Wl,--fix-cortex-a8"
 	case "armv5te":
 		// Nothing extra for armv5te
+	case "armv8-a":
+		// Nothing extra for armv8-a
 	default:
 		panic(fmt.Sprintf("Unknown ARM architecture version: %q", arch.ArchVariant))
 	}
