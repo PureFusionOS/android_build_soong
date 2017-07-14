@@ -15,7 +15,6 @@
 package build
 
 import (
-	"bytes"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -78,36 +77,6 @@ func DumpMakeVars(ctx Context, config Config, goals, extra_targets, vars []strin
 	return ret, nil
 }
 
-// Variables to print out in the top banner
-var BannerVars = []string{
-	"PLATFORM_VERSION",
-	"BUILD_ID",
-	"TARGET_PRODUCT",
-	"TARGET_BUILD_VARIANT",
-	"TARGET_BUILD_TYPE",
-	"TARGET_BUILD_APPS",
-	"TARGET_ARCH",
-	"TARGET_ARCH_VARIANT",
-	"TARGET_CPU_VARIANT",
-	"TARGET_2ND_ARCH",
-	"TARGET_2ND_ARCH_VARIANT",
-	"TARGET_2ND_CPU_VARIANT",
-}
-
-func Banner(make_vars map[string]string) string {
-	b := &bytes.Buffer{}
-
-	fmt.Fprintln(b, "============================================")
-	for _, name := range BannerVars {
-		if make_vars[name] != "" {
-			fmt.Fprintf(b, "%s=%s\n", name, make_vars[name])
-		}
-	}
-	fmt.Fprint(b, "============================================")
-
-	return b.String()
-}
-
 func runMakeProductConfig(ctx Context, config Config) {
 	// Variables to export into the environment of Kati/Ninja
 	exportEnvVars := []string{
@@ -136,6 +105,22 @@ func runMakeProductConfig(ctx Context, config Config) {
 		"SKIP_ABI_CHECKS",
 	}
 
+	// Variables to print out in the top banner
+	bannerVars := []string{
+		"PLATFORM_VERSION",
+		"BUILD_ID",
+		"TARGET_PRODUCT",
+		"TARGET_BUILD_VARIANT",
+		"TARGET_BUILD_TYPE",
+		"TARGET_BUILD_APPS",
+		"TARGET_ARCH",
+		"TARGET_ARCH_VARIANT",
+		"TARGET_CPU_VARIANT",
+		"TARGET_2ND_ARCH",
+		"TARGET_2ND_ARCH_VARIANT",
+		"TARGET_2ND_CPU_VARIANT",
+	}
+
 	allVars := append(append([]string{
 		// Used to execute Kati and Ninja
 		"NINJA_GOALS",
@@ -143,7 +128,7 @@ func runMakeProductConfig(ctx Context, config Config) {
 
 		// To find target/product/<DEVICE>
 		"TARGET_DEVICE",
-	}, exportEnvVars...), BannerVars...)
+	}, exportEnvVars...), bannerVars...)
 
 	make_vars, err := DumpMakeVars(ctx, config, config.Arguments(), []string{
 		filepath.Join(config.SoongOutDir(), "soong.variables"),
@@ -153,7 +138,13 @@ func runMakeProductConfig(ctx Context, config Config) {
 	}
 
 	// Print the banner like make does
-	fmt.Fprintln(ctx.Stdout(), Banner(make_vars))
+	fmt.Fprintln(ctx.Stdout(), "============================================")
+	for _, name := range bannerVars {
+		if make_vars[name] != "" {
+			fmt.Fprintf(ctx.Stdout(), "%s=%s\n", name, make_vars[name])
+		}
+	}
+	fmt.Fprintln(ctx.Stdout(), "============================================")
 
 	// Populate the environment
 	env := config.Environment()
