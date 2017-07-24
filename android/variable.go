@@ -64,6 +64,10 @@ type variableProperties struct {
 			Cflags []string
 		}
 
+		Needs_text_relocations struct {
+			Cppflags []string
+		}
+
 		Uses_media_extensions struct {
 			Cflags []string
 		}
@@ -142,6 +146,7 @@ type productVariables struct {
 	Eng                        *bool `json:",omitempty"`
 	EnableCFI                  *bool `json:",omitempty"`
 	Has_legacy_camera_hal1     *bool `json:",omitempty"`
+	Needs_text_relocations     *bool `json:",omitempty"`
 	Treble                     *bool `json:",omitempty"`
 	Uses_media_extensions      *bool `json:",omitempty"`
 	Libart_img_base            *string `json:",omitempty"`
