@@ -23,6 +23,10 @@ import (
 	"android/soong/android"
 )
 
+var (
+	vendorSuffix = ".vendor"
+)
+
 type AndroidMkContext interface {
 	Target() android.Target
 	subAndroidMk(*android.AndroidMkData, interface{})
@@ -76,13 +80,37 @@ func (c *Module) AndroidMk() (ret android.AndroidMkData, err error) {
 
 	c.subAndroidMk(&ret, c.compiler)
 	c.subAndroidMk(&ret, c.linker)
+	if c.sanitize != nil {
+		c.subAndroidMk(&ret, c.sanitize)
+	}
 	c.subAndroidMk(&ret, c.installer)
 
-	if c.vndk() {
-		ret.SubName += ".vendor"
+	if c.vndk() && Bool(c.Properties.Vendor_available) {
+		// .vendor suffix is added only when we will have two variants: core and vendor.
+		// The suffix is not added for vendor-only module.
+		ret.SubName += vendorSuffix
 	}
 
 	return ret, nil
+}
+
+func androidMkWriteTestData(data android.Paths, ctx AndroidMkContext, ret *android.AndroidMkData) {
+	var testFiles []string
+	for _, d := range data {
+		rel := d.Rel()
+		path := d.String()
+		if !strings.HasSuffix(path, rel) {
+			panic(fmt.Errorf("path %q does not end with %q", path, rel))
+		}
+		path = strings.TrimSuffix(path, rel)
+		testFiles = append(testFiles, path+":"+rel)
+	}
+	if len(testFiles) > 0 {
+		ret.Extra = append(ret.Extra, func(w io.Writer, outputFile android.Path) error {
+			fmt.Fprintln(w, "LOCAL_TEST_DATA := "+strings.Join(testFiles, " "))
+			return nil
+		})
+	}
 }
 
 func (library *libraryDecorator) androidMkWriteExportedFlags(w io.Writer) {
@@ -141,6 +169,14 @@ func (library *libraryDecorator) AndroidMk(ctx AndroidMkContext, ret *android.An
 
 	ret.Extra = append(ret.Extra, func(w io.Writer, outputFile android.Path) error {
 		library.androidMkWriteExportedFlags(w)
+		fmt.Fprintln(w, "LOCAL_ADDITIONAL_DEPENDENCIES := ")
+		if library.sAbiOutputFile.Valid() {
+			fmt.Fprintln(w, "LOCAL_ADDITIONAL_DEPENDENCIES += ", library.sAbiOutputFile.String())
+			if library.sAbiDiff.Valid() && !library.static() {
+				fmt.Fprintln(w, "LOCAL_ADDITIONAL_DEPENDENCIES += ", library.sAbiDiff.String())
+				fmt.Fprintln(w, "HEADER_ABI_DIFFS += ", library.sAbiDiff.String())
+			}
+		}
 
 		fmt.Fprintln(w, "LOCAL_BUILT_MODULE_STEM := $(LOCAL_MODULE)"+outputFile.Ext())
 
@@ -193,6 +229,16 @@ func (binary *binaryDecorator) AndroidMk(ctx AndroidMkContext, ret *android.Andr
 
 func (benchmark *benchmarkDecorator) AndroidMk(ctx AndroidMkContext, ret *android.AndroidMkData) {
 	ctx.subAndroidMk(ret, benchmark.binaryDecorator)
+	ret.Class = "NATIVE_TESTS"
+	ret.Extra = append(ret.Extra, func(w io.Writer, outputFile android.Path) error {
+		if len(benchmark.Properties.Test_suites) > 0 {
+			fmt.Fprintln(w, "LOCAL_COMPATIBILITY_SUITE :=",
+				strings.Join(benchmark.Properties.Test_suites, " "))
+		}
+		return nil
+	})
+
+	androidMkWriteTestData(benchmark.data, ctx, ret)
 }
 
 func (test *testBinary) AndroidMk(ctx AndroidMkContext, ret *android.AndroidMkData) {
@@ -210,22 +256,7 @@ func (test *testBinary) AndroidMk(ctx AndroidMkContext, ret *android.AndroidMkDa
 		return nil
 	})
 
-	var testFiles []string
-	for _, d := range test.data {
-		rel := d.Rel()
-		path := d.String()
-		if !strings.HasSuffix(path, rel) {
-			panic(fmt.Errorf("path %q does not end with %q", path, rel))
-		}
-		path = strings.TrimSuffix(path, rel)
-		testFiles = append(testFiles, path+":"+rel)
-	}
-	if len(testFiles) > 0 {
-		ret.Extra = append(ret.Extra, func(w io.Writer, outputFile android.Path) error {
-			fmt.Fprintln(w, "LOCAL_TEST_DATA := "+strings.Join(testFiles, " "))
-			return nil
-		})
-	}
+	androidMkWriteTestData(test.data, ctx, ret)
 }
 
 func (test *testLibrary) AndroidMk(ctx AndroidMkContext, ret *android.AndroidMkData) {
