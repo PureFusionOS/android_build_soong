@@ -88,8 +88,9 @@ type variableProperties struct {
 			Cppflags []string
 		}
 
-		// include Fusion variables
-		*android.Product_variables
+		// include Pure variables
+		Pure android.Product_variables
+
 	} `android:"arch_variant"`
 }
 
@@ -156,8 +157,8 @@ type productVariables struct {
 
 	Override_rs_driver *string `json:",omitempty"`
 
-	// include Fusion variables
-	*android.ProductVariables
+	// include Lineage variables
+	Pure android.ProductVariables
 }
 
 func boolPtr(v bool) *bool {
