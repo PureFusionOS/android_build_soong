@@ -161,7 +161,7 @@ func ndkPrebuiltStaticStlFactory() android.Module {
 }
 
 func getNdkStlLibDir(ctx android.ModuleContext, toolchain config.Toolchain, stl string) android.SourcePath {
-	gccVersion := toolchain.GccVersion()
+	gccVersion := "6.x"
 	var libDir string
 	switch stl {
 	case "libstlport":
