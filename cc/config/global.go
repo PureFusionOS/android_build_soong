@@ -33,6 +33,7 @@ var (
 		"-Wno-unused",
 		"-Winit-self",
 		"-Wpointer-arith",
+		"-Wno-inconsistent-missing-override",
 
 		// COMMON_RELEASE_CFLAGS
 		"-DNDEBUG",
@@ -45,22 +46,23 @@ var (
 		"-fdiagnostics-color",
 
 		// TARGET_ERROR_FLAGS
-		"-Werror=return-type",
-		"-Werror=non-virtual-dtor",
-		"-Werror=address",
-		"-Werror=sequence-point",
-		"-Werror=date-time",
+		"-Wno-error=return-type",
+		"-Wno-error=non-virtual-dtor",
+		"-Wno-error=address",
+		"-Wno-error=sequence-point",
+		"-Wno-error=date-time",
 	}
 
 	hostGlobalCflags = []string{}
 
 	commonGlobalCppflags = []string{
+		"-Wno-inconsistent-missing-override",
 		"-Wsign-promo",
 	}
 
 	noOverrideGlobalCflags = []string{
-		"-Werror=int-to-pointer-cast",
-		"-Werror=pointer-to-int-cast",
+		"-Wno-error=int-to-pointer-cast",
+		"-Wno-error=pointer-to-int-cast",
 	}
 
 	IllegalFlags = []string{
@@ -77,8 +79,8 @@ var (
 
 	// prebuilts/clang default settings.
 	ClangDefaultBase         = "prebuilts/clang/host"
-	ClangDefaultVersion      = "clang-4053586"
-	ClangDefaultShortVersion = "5.0"
+	ClangDefaultVersion      = "6.0"
+	ClangDefaultShortVersion = "6.0"
 )
 
 var pctx = android.NewPackageContext("android/soong/cc/config")
@@ -159,10 +161,10 @@ func init() {
 	// These are tied to the version of LLVM directly in external/llvm, so they might trail the host prebuilts
 	// being used for the rest of the build process.
 	pctx.SourcePathVariable("RSClangBase", "prebuilts/clang/host")
-	pctx.SourcePathVariable("RSClangVersion", "clang-3289846")
-	pctx.SourcePathVariable("RSReleaseVersion", "3.8")
+	pctx.SourcePathVariable("RSClangVersion", ClangDefaultVersion)
+	pctx.SourcePathVariable("RSReleaseVersion", ClangDefaultShortVersion)
 	pctx.StaticVariable("RSLLVMPrebuiltsPath", "${RSClangBase}/${HostPrebuiltTag}/${RSClangVersion}/bin")
-	pctx.StaticVariable("RSIncludePath", "${RSLLVMPrebuiltsPath}/../lib64/clang/${RSReleaseVersion}/include")
+	pctx.StaticVariable("RSIncludePath", "${RSClangBase}/${HostPrebuiltTag}/${RSClangVersion}/lib/clang/6.0.0/include")
 
 	pctx.PrefixedExistentPathsForSourcesVariable("RsGlobalIncludes", "-I",
 		[]string{
