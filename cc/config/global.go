@@ -151,7 +151,7 @@ func init() {
 		}
 		return ClangDefaultShortVersion, nil
 	})
-	pctx.StaticVariable("ClangAsanLibDir", "${ClangPath}/lib64/clang/${ClangShortVersion}/lib/linux")
+	pctx.StaticVariable("ClangAsanLibDir", "${ClangPath}/lib/clang/6.0.0/lib/linux")
 	if runtime.GOOS == "darwin" {
 		pctx.StaticVariable("LLVMGoldPlugin", "${ClangPath}/lib64/LLVMgold.dylib")
 	} else {
