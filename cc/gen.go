@@ -25,8 +25,21 @@ import (
 )
 
 func init() {
+	pctx.VariableFunc("HostOutExecutable", func(config interface{}) (string, error) {
+		if override := config.(android.Config).Getenv("HOST_OUT_EXECUTABLES"); override != "" {
+			return override, nil
+		}
+		return "FAILURE", nil
+	})
+	pctx.VariableFunc("GetBisonPath", func(config interface{}) (string, error) {
+		if override := config.(android.Config).Getenv("USE_HOST_BISON"); override == "yes" {
+			return "${HostOutExecutable}/bison", nil
+		}
+		return "prebuilts/misc/${config.HostPrebuiltTag}/bison/bison", nil
+	})
+
 	pctx.SourcePathVariable("lexCmd", "prebuilts/misc/${config.HostPrebuiltTag}/flex/flex-2.5.39")
-	pctx.SourcePathVariable("yaccCmd", "prebuilts/misc/${config.HostPrebuiltTag}/bison/bison")
+	pctx.SourcePathVariable("yaccCmd", "${GetBisonPath}")
 	pctx.SourcePathVariable("yaccDataDir", "external/bison/data")
 
 	pctx.HostBinToolVariable("aidlCmd", "aidl-cpp")
