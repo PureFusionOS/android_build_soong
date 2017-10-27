@@ -105,7 +105,7 @@ func (t *toolchainLinuxBionic) GccTriple() string {
 }
 
 func (t *toolchainLinuxBionic) GccVersion() string {
-	return "4.9"
+	return "6.x"
 }
 
 func (t *toolchainLinuxBionic) Cflags() string {
