@@ -31,6 +31,7 @@ var (
 		"-Wno-unused",
 		"-Winit-self",
 		"-Wpointer-arith",
+		"-Wno-inconsistent-missing-override",
 
 		// COMMON_RELEASE_CFLAGS
 		"-DNDEBUG",
@@ -43,22 +44,23 @@ var (
 		"-fdiagnostics-color",
 
 		// TARGET_ERROR_FLAGS
-		"-Werror=return-type",
-		"-Werror=non-virtual-dtor",
-		"-Werror=address",
-		"-Werror=sequence-point",
-		"-Werror=date-time",
+		"-Wno-error=return-type",
+		"-Wno-error=non-virtual-dtor",
+		"-Wno-error=address",
+		"-Wno-error=sequence-point",
+		"-Wno-error=date-time",
 	}
 
 	hostGlobalCflags = []string{}
 
 	commonGlobalCppflags = []string{
+		"-Wno-inconsistent-missing-override",
 		"-Wsign-promo",
 	}
 
 	noOverrideGlobalCflags = []string{
-		"-Werror=int-to-pointer-cast",
-		"-Werror=pointer-to-int-cast",
+		"-Wno-error=int-to-pointer-cast",
+		"-Wno-error=pointer-to-int-cast",
 	}
 
 	IllegalFlags = []string{
