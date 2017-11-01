@@ -543,6 +543,10 @@ func (c *deviceConfig) DeviceKernelHeaderDirs() []string {
 	return c.config.ProductVariables.DeviceKernelHeaders
 }
 
+func (c *deviceConfig) SpecificCameraParametersLibrary() string {
+	return String(c.config.ProductVariables.Pure.Specific_camera_parameter_library)
+}
+
 func (c *deviceConfig) NativeCoverageEnabled() bool {
 	return Bool(c.config.ProductVariables.NativeCoverage)
 }
