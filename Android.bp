@@ -147,6 +147,8 @@ bootstrap_go_package {
         "cc/llndk_library.go",
 
         "cc/kernel_headers.go",
+
+        "cc/genrule.go",
     ],
     testSrcs: [
         "cc/cc_test.go",
@@ -303,7 +305,7 @@ toolchain_library {
     enabled: false,
     target: {
         windows: {
-            enabled: true
+            enabled: true,
         },
     },
 }
@@ -321,4 +323,46 @@ toolchain_library {
 kernel_headers {
     name: "device_kernel_headers",
     vendor: true,
+}
+
+cc_genrule {
+    name: "host_bionic_linker_asm",
+    host_supported: true,
+    device_supported: false,
+    target: {
+        linux_bionic: {
+            enabled: true,
+        },
+        linux: {
+            enabled: false,
+        },
+        darwin: {
+            enabled: false,
+        },
+    },
+    tools: ["extract_linker"],
+    cmd: "$(location) -s $(out) $(in)",
+    srcs: [":linker"],
+    out: ["linker.s"],
+}
+
+cc_genrule {
+    name: "host_bionic_linker_script",
+    host_supported: true,
+    device_supported: false,
+    target: {
+        linux_bionic: {
+            enabled: true,
+        },
+        linux: {
+            enabled: false,
+        },
+        darwin: {
+            enabled: false,
+        },
+    },
+    tools: ["extract_linker"],
+    cmd: "$(location) -T $(out) $(in)",
+    srcs: [":linker"],
+    out: ["linker.script"],
 }
