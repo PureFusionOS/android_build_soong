@@ -74,8 +74,6 @@ func NewConfig(ctx Context, args ...string) Config {
 		"GOPATH",
 
 		// These should only come from Soong, not the environment.
-		"CLANG",
-		"CLANG_CXX",
 		"CCC_CC",
 		"CCC_CXX",
 

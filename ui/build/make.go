@@ -86,6 +86,10 @@ func runMakeProductConfig(ctx Context, config Config) {
 		// modified by PRODUCT-* arguments
 		"TARGET_PRODUCT",
 
+
+		"CLANG",
+		"CLANG_CXX",
+
 		// compiler wrappers set up by make
 		"CC_WRAPPER",
 		"CXX_WRAPPER",
