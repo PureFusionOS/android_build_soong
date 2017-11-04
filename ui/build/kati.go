@@ -44,7 +44,7 @@ func genKatiSuffix(ctx Context, config Config) {
 
 	// If the suffix is too long, replace it with a md5 hash and write a
 	// file that contains the original suffix.
-	if len(katiSuffix) > 64 {
+	if len(katiSuffix) > 240 {
 		shortSuffix := "-" + fmt.Sprintf("%x", md5.Sum([]byte(katiSuffix)))
 		config.SetKatiSuffix(shortSuffix)
 
