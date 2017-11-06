@@ -59,6 +59,8 @@ var (
 
 		"-fno-canonical-system-headers",
 		"-ffunction-sections",
+		"-fdata-sections",
+		"-fno-short-enums",
 		"-funwind-tables",
 		"-fstack-protector-strong",
 		"-Wa,--noexecstack",

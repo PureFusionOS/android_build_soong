@@ -22,20 +22,12 @@ import (
 
 var (
 	mips64Cflags = []string{
-		"-fomit-frame-pointer",
-		"-funswitch-loops",
 		"-U__unix",
 		"-U__unix__",
 		"-Umips",
-		"-fdata-sections",
 
 		// Help catch common 32/64-bit errors.
 		"-Werror=implicit-function-declaration",
-
-		// TARGET_RELEASE_CFLAGS
-		"-fgcse-after-reload",
-		"-frerun-cse-after-loop",
-		"-frename-registers",
 	}
 
 	mips64ClangCflags = append(mips64Cflags, []string{
