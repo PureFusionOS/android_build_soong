@@ -19,6 +19,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"os"
 
 	"android/soong/android"
 	"android/soong/cc/config"
@@ -113,8 +114,8 @@ func makeVarsProvider(ctx android.MakeVarsContext) {
 	if config.SDClang {
 		ctx.Strict("SDCLANG", strconv.FormatBool(config.SDClang))
 	}
-	ctx.Strict("SDCLANG_PATH", "${config.SDClangBin}")
-	ctx.Strict("SDCLANG_PATH_2", "${config.SDClangBin2}")
+	ctx.Strict("SDCLANG_PATH", os.Getenv("SDCLANG_PATH"))
+	ctx.Strict("SDCLANG_PATH_2", os.Getenv("SDCLANG_PATH2"))
 	ctx.Strict("SDCLANG_COMMON_FLAGS", "${config.SDClangFlags}")
 	ctx.Strict("SDCLANG_COMMON_FLAGS_2", "${config.SDClangFlags2}")
 }
