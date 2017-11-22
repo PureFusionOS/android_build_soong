@@ -2,6 +2,7 @@ subdirs = [
     "androidmk",
     "bpfix",
     "cmd/*",
+    "jar",
     "third_party/zip",
     "ui/*",
 ]
