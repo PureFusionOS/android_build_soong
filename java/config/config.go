@@ -69,6 +69,7 @@ func init() {
 	pctx.StaticVariable("SoongZipCmd", filepath.Join("${bootstrap.ToolDir}", "soong_zip"))
 	pctx.StaticVariable("MergeZipsCmd", filepath.Join("${bootstrap.ToolDir}", "merge_zips"))
 	pctx.SourcePathVariable("DxCmd", "prebuilts/r8/d8-compat-dx")
+	pctx.SourcePathVariable("D8Cmd", "prebuilts/r8/d8")
 	pctx.HostJavaToolVariable("JarjarCmd", "jarjar.jar")
 
 	pctx.VariableFunc("JavacWrapper", func(config interface{}) (string, error) {

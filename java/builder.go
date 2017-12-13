@@ -66,9 +66,28 @@ var (
 	dx = pctx.AndroidStaticRule("dx",
 		blueprint.RuleParams{
 			Command: `rm -rf "$outDir" && mkdir -p "$outDir" && ` +
-				`${config.DxCmd} --dex --output=$outDir $dxFlags $in || ( rm -rf "$outDir"; exit 41 ) && ` +
-				`find "$outDir" -name "classes*.dex" | sort > $out`,
-			CommandDeps: []string{"${config.DxCmd}"},
+				`${config.DxCmd} --dex --output=$outDir $dxFlags $in && ` +
+				`${config.SoongZipCmd} -o $outDir/classes.dex.jar -C $outDir -D $outDir && ` +
+				`${config.MergeZipsCmd} -D -stripFile "*.class" $out $outDir/classes.dex.jar $in`,
+			CommandDeps: []string{
+				"${config.DxCmd}",
+				"${config.SoongZipCmd}",
+				"${config.MergeZipsCmd}",
+			},
+		},
+		"outDir", "dxFlags")
+
+	d8 = pctx.AndroidStaticRule("d8",
+		blueprint.RuleParams{
+			Command: `rm -rf "$outDir" && mkdir -p "$outDir" && ` +
+				`${config.D8Cmd} --output $outDir $dxFlags $in && ` +
+				`${config.SoongZipCmd} -o $outDir/classes.dex.jar -C $outDir -D $outDir && ` +
+				`${config.MergeZipsCmd} -D -stripFile "*.class" $out $outDir/classes.dex.jar $in`,
+			CommandDeps: []string{
+				"${config.DxCmd}",
+				"${config.SoongZipCmd}",
+				"${config.MergeZipsCmd}",
+			},
 		},
 		"outDir", "dxFlags")
 
@@ -185,9 +204,15 @@ func TransformClassesJarToDex(ctx android.ModuleContext, classesJar android.Path
 	outDir := android.PathForModuleOut(ctx, "dex")
 	outputFile := android.PathForModuleOut(ctx, "dex.filelist")
 
+	rule := dx
+	desc := "dx"
+	if ctx.AConfig().IsEnvTrue("USE_D8_DESUGAR") {
+		rule = d8
+		desc = "d8"
+	}
 	ctx.ModuleBuild(pctx, android.ModuleBuildParams{
-		Rule:        dx,
-		Description: "dx",
+		Rule:        rule,
+		Description: desc,
 		Output:      outputFile,
 		Input:       classesJar,
 		Args: map[string]string{

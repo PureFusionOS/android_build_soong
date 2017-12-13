@@ -377,15 +377,6 @@ func (j *Module) compile(ctx android.ModuleContext) {
 
 	if j.deviceProperties.Dex && len(srcFiles) > 0 && j.installable() {
 		dxFlags := j.deviceProperties.Dxflags
-		if false /* emma enabled */ {
-			// If you instrument class files that have local variable debug information in
-			// them emma does not correctly maintain the local variable table.
-			// This will cause an error when you try to convert the class files for Android.
-			// The workaround here is to build different dex file here based on emma switch
-			// then later copy into classes.dex. When emma is on, dx is run with --no-locals
-			// option to remove local variable information
-			dxFlags = append(dxFlags, "--no-locals")
-		}
 
 		if ctx.AConfig().Getenv("NO_OPTIMIZE_DX") != "" {
 			dxFlags = append(dxFlags, "--no-optimize")
