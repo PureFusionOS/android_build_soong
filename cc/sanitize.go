@@ -39,7 +39,7 @@ var (
 	// FIXME: revert the __cfi_check flag when clang is updated to r280031.
 	cfiLdflags = []string{"-flto", "-fsanitize-cfi-cross-dso", "-fsanitize=cfi",
 		"-Wl,-plugin-opt,O1 -Wl,-export-dynamic-symbol=__cfi_check"}
-	cfiArflags = []string{"--plugin ${config.ClangBin}/../lib64/LLVMgold.so"}
+	cfiArflags = []string{"--plugin ${config.ClangBin}/../lib/LLVMgold.so"}
 	sdclangCfiCflags = []string{"-flto", "-fsanitize-cfi-cross-dso", "-fvisibility=default",
 		"-fsanitize-blacklist=external/compiler-rt/lib/cfi/cfi_blacklist.txt",
 		"-fuse-ld=qcld"}
