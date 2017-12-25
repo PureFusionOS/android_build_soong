@@ -24,6 +24,7 @@ optional_subdirs = [
     "frameworks/hardware/interfaces",
     "frameworks/opt/net/wifi",
     "hardware/*",
+    "hardware/lineage/interfaces",
     "libcore",
     "libnativehelper",
     "packages/apps/*",
