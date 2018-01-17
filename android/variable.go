@@ -177,6 +177,7 @@ type productVariables struct {
 	DeviceKernelHeaders []string `json:",omitempty"`
 
 	BoardUsesQTIHardware *bool `json:",omitempty"`
+	TargetUsesProprietaryLibs *bool `json:",omitempty"`
 
 	// include Pure variables
 	Pure android.ProductVariables
@@ -212,6 +213,7 @@ func (v *productVariables) SetDefaultConfig() {
 		Malloc_not_svelte:          boolPtr(false),
 		Safestack:                  boolPtr(false),
 		BoardUsesQTIHardware:      boolPtr(false),
+		TargetUsesProprietaryLibs:      boolPtr(false),
 	}
 
 	if runtime.GOOS == "linux" {
