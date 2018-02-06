@@ -369,6 +369,10 @@ func (sanitize *sanitize) flags(ctx ModuleContext, flags Flags) Flags {
 			flags.LdFlags = append(flags.LdFlags, "-march=armv7-a")
 		}
 		sanitizers = append(sanitizers, "cfi")
+		if ctx.Device() {
+			// Work around a bug in Clang. The CFI sanitizer requires LTO, and when
+			// LTO is enabled, the Clang driver fails to enable emutls for Android.
+                }
 		if flags.Sdclang {
 			flags.CFlags = append(flags.CFlags, sdclangCfiCflags...)
 			flags.LdFlags = append(flags.LdFlags, sdclangCfiLdflags...)
