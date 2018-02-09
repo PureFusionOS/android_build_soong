@@ -123,6 +123,7 @@ func flagsToBuilderFlags(in Flags) builderFlags {
 		systemIncludeFlags: strings.Join(in.SystemIncludeFlags, " "),
 
 		groupStaticLibs: in.GroupStaticLibs,
+		arGoldPlugin:    in.ArGoldPlugin,
 	}
 }
 
