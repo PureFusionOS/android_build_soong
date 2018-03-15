@@ -234,8 +234,8 @@ func init() {
 }
 
 func setSdclangVars() {
-	sdclangPath := os.Getenv("SDCLANG_PATH")
-	sdclangPath2 := os.Getenv("SDCLANG_PATH2")
+	sdclangPath := "vendor/qcom/sdclang-4.0/linux-x86/bin"
+	sdclangPath2 := "vendor/qcom/sdclang-4.0/linux-x86/bin"
 	sdclangAEFlag := ""
 	sdclangFlags := ""
 	sdclangFlags2 := ""
