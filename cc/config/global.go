@@ -36,6 +36,10 @@ var (
 		"-Wno-unused",
 		"-Winit-self",
 		"-Wpointer-arith",
+		"-Wno-address-of-packed-member",
+		"-Wno-main",
+		"-Wno-instantiation-after-specialization",
+		"-Wno-max-unsigned-zero",
 		"-Wno-inconsistent-missing-override",
 
 		// COMMON_RELEASE_CFLAGS
