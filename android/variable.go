@@ -20,6 +20,8 @@ import (
 	"runtime"
 	"strings"
 
+	"pure/soong/android"
+
 	"github.com/google/blueprint/proptools"
 )
 
@@ -94,6 +96,9 @@ type variableProperties struct {
 		Pdk struct {
 			Enabled *bool
 		}
+
+		// include PureFusionOS variables
+		   android.Product_variables
 	} `android:"arch_variant"`
 }
 
@@ -170,6 +175,8 @@ type productVariables struct {
 	DeviceKernelHeaders []string `json:",omitempty"`
 
 	BoardUsesQTIHardware *bool `json:",omitempty"`
+	// include PureFusionOS variables
+	   android.ProductVariables
 }
 
 func boolPtr(v bool) *bool {
