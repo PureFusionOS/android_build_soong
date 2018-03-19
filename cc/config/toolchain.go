@@ -219,10 +219,6 @@ func AddressSanitizerRuntimeLibrary(t Toolchain) string {
 	return SanitizerRuntimeLibrary(t, "asan")
 }
 
-func UndefinedBehaviorSanitizerRuntimeLibrary(t Toolchain) string {
-	return SanitizerRuntimeLibrary(t, "ubsan_standalone")
-}
-
 func ThreadSanitizerRuntimeLibrary(t Toolchain) string {
 	return SanitizerRuntimeLibrary(t, "tsan")
 }

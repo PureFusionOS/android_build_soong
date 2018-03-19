@@ -38,7 +38,6 @@ func makeVarsProvider(ctx android.MakeVarsContext) {
 	ctx.Strict("CLANG_CXX", "${config.ClangBin}/clang++")
 	ctx.Strict("LLVM_AS", "${config.ClangBin}/llvm-as")
 	ctx.Strict("LLVM_LINK", "${config.ClangBin}/lld-link")
-	ctx.Strict("PATH_TO_CLANG_TIDY", "${config.ClangBin}/clang-tidy")
 	ctx.StrictSorted("CLANG_CONFIG_UNKNOWN_CFLAGS", strings.Join(config.ClangUnknownCflags, " "))
 
 	ctx.Strict("RS_LLVM_PREBUILTS_VERSION", "${config.RSClangVersion}")
@@ -236,7 +235,6 @@ func makeVarsToolchain(ctx android.MakeVarsContext, secondPrefix string,
 
 		if target.Os.Class == android.Device {
 			ctx.Strict(secondPrefix+"ADDRESS_SANITIZER_RUNTIME_LIBRARY", strings.TrimSuffix(config.AddressSanitizerRuntimeLibrary(toolchain), ".so"))
-			ctx.Strict(secondPrefix+"UBSAN_RUNTIME_LIBRARY", strings.TrimSuffix(config.UndefinedBehaviorSanitizerRuntimeLibrary(toolchain), ".so"))
 			ctx.Strict(secondPrefix+"TSAN_RUNTIME_LIBRARY", strings.TrimSuffix(config.ThreadSanitizerRuntimeLibrary(toolchain), ".so"))
 		}
 
