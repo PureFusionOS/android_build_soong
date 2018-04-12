@@ -45,15 +45,8 @@ var (
 		"-Wl,--icf=safe",
 	}
 
-	// Using lld's gnu or sysv hash style alone will fail at boot,
-	// rejected by Android's bionic dynamic linker.
-	// lld does not have --icf=safe or -m,aarch64_elf64_le_vec
-	// Only newer lld, from clang-7.0, has --fix-cortex-a53-843419.
-	arm64Lldflags = []string{
-		"-Wl,--hash-style=both",
-		"-Wl,--fix-cortex-a53-843419",
-		"-fuse-ld=lld",
-	}
+	arm64Lldflags = append(ClangFilterUnknownLldflags(arm64Ldflags),
+		"-Wl,-z,max-page-size=4096")
 
 	arm64Cppflags = []string{
 		"-fvisibility-inlines-hidden",

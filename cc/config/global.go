@@ -84,16 +84,11 @@ var (
 		"-Wl,--no-undefined-version",
 	}
 
-	// Maybe in the future, LLD will have different global flags.
-	deviceGlobalLldflags = []string{
-		"-Wl,-z,noexecstack",
-		"-Wl,-z,relro",
-		"-Wl,-z,now",
-		"-Wl,--build-id=md5",
-		"-Wl,--warn-shared-textrel",
-		"-Wl,--fatal-warnings",
-		"-Wl,--no-undefined-version",
-	}
+	deviceGlobalLldflags = append(ClangFilterUnknownLldflags(deviceGlobalLdflags),
+		[]string{
+			"-Wl,--pack-dyn-relocs=android",
+			"-fuse-ld=lld",
+	}...)
 
 	hostGlobalCflags = []string{}
 
