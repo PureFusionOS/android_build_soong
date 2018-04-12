@@ -43,12 +43,7 @@ var (
 		"-Wl,--hash-style=gnu",
 	}
 
-	// Using lld's gnu or sysv hash style alone will fail at boot,
-	// rejected by Android's bionic dynamic linker.
-	x86Lldflags = []string{
-		"-Wl,--hash-style=both",
-		"-fuse-ld=lld",
-	}
+	x86Lldflags = ClangFilterUnknownLldflags(x86Ldflags)
 
 	x86ArchVariantCflags = map[string][]string{
 		"": []string{
