@@ -42,14 +42,31 @@ var (
 		"--sysroot ${WindowsGccRoot}/${WindowsGccTriple}",
 	}
 
+	windowsClangCflags = append(ClangFilterUnknownCflags(windowsCflags), []string{}...)
+
 	windowsIncludeFlags = []string{
 		"-isystem ${WindowsGccRoot}/${WindowsGccTriple}/include",
 		"-isystem ${WindowsGccRoot}/lib/gcc/${WindowsGccTriple}/4.8.3/include",
 	}
 
+	windowsClangCppflags = []string{
+		"-isystem ${WindowsGccRoot}/${WindowsGccTriple}/include/c++/4.8.3",
+		"-isystem ${WindowsGccRoot}/${WindowsGccTriple}/include/c++/4.8.3/backward",
+	}
+
+	windowsX86ClangCppflags = []string{
+		"-isystem ${WindowsGccRoot}/${WindowsGccTriple}/include/c++/4.8.3/${WindowsGccTriple}/32",
+	}
+
+	windowsX8664ClangCppflags = []string{
+		"-isystem ${WindowsGccRoot}/${WindowsGccTriple}/include/c++/4.8.3/${WindowsGccTriple}",
+	}
+
 	windowsLdflags = []string{
 		"--enable-stdcall-fixup",
 	}
+	windowsClangLdflags  = append(ClangFilterUnknownCflags(windowsLdflags), []string{}...)
+	windowsClangLldflags = ClangFilterUnknownLldflags(windowsClangLdflags)
 
 	windowsX86Cflags = []string{
 		"-m32",
@@ -64,11 +81,23 @@ var (
 		"-Wl,--large-address-aware",
 		"-L${WindowsGccRoot}/${WindowsGccTriple}/lib32",
 	}
+	windowsX86ClangLdflags = append(ClangFilterUnknownCflags(windowsX86Ldflags), []string{
+		"-B${WindowsGccRoot}/lib/gcc/${WindowsGccTriple}/4.8.3/32",
+		"-L${WindowsGccRoot}/lib/gcc/${WindowsGccTriple}/4.8.3/32",
+		"-B${WindowsGccRoot}/${WindowsGccTriple}/lib32",
+	}...)
+	windowsX86ClangLldflags = ClangFilterUnknownLldflags(windowsX86ClangLdflags)
 
 	windowsX8664Ldflags = []string{
 		"-m64",
 		"-L${WindowsGccRoot}/${WindowsGccTriple}/lib64",
 	}
+	windowsX8664ClangLdflags = append(ClangFilterUnknownCflags(windowsX8664Ldflags), []string{
+		"-B${WindowsGccRoot}/lib/gcc/${WindowsGccTriple}/4.8.3",
+		"-L${WindowsGccRoot}/lib/gcc/${WindowsGccTriple}/4.8.3",
+		"-B${WindowsGccRoot}/${WindowsGccTriple}/lib64",
+	}...)
+	windowsX8664ClangLldflags = ClangFilterUnknownLldflags(windowsX8664ClangLdflags)
 
 	windowsAvailableLibraries = addPrefix([]string{
 		"gdi32",
@@ -98,10 +127,26 @@ func init() {
 	pctx.StaticVariable("WindowsCflags", strings.Join(windowsCflags, " "))
 	pctx.StaticVariable("WindowsLdflags", strings.Join(windowsLdflags, " "))
 
+	pctx.StaticVariable("WindowsClangCflags", strings.Join(windowsClangCflags, " "))
+	pctx.StaticVariable("WindowsClangLdflags", strings.Join(windowsClangLdflags, " "))
+	pctx.StaticVariable("WindowsClangLldflags", strings.Join(windowsClangLldflags, " "))
+	pctx.StaticVariable("WindowsClangCppflags", strings.Join(windowsClangCppflags, " "))
+
 	pctx.StaticVariable("WindowsX86Cflags", strings.Join(windowsX86Cflags, " "))
 	pctx.StaticVariable("WindowsX8664Cflags", strings.Join(windowsX8664Cflags, " "))
 	pctx.StaticVariable("WindowsX86Ldflags", strings.Join(windowsX86Ldflags, " "))
 	pctx.StaticVariable("WindowsX8664Ldflags", strings.Join(windowsX8664Ldflags, " "))
+
+	pctx.StaticVariable("WindowsX86ClangCflags",
+		strings.Join(ClangFilterUnknownCflags(windowsX86Cflags), " "))
+	pctx.StaticVariable("WindowsX8664ClangCflags",
+		strings.Join(ClangFilterUnknownCflags(windowsX8664Cflags), " "))
+	pctx.StaticVariable("WindowsX86ClangLdflags", strings.Join(windowsX86ClangLdflags, " "))
+	pctx.StaticVariable("WindowsX86ClangLldflags", strings.Join(windowsX86ClangLldflags, " "))
+	pctx.StaticVariable("WindowsX8664ClangLdflags", strings.Join(windowsX8664ClangLdflags, " "))
+	pctx.StaticVariable("WindowsX8664ClangLldflags", strings.Join(windowsX8664ClangLldflags, " "))
+	pctx.StaticVariable("WindowsX86ClangCppflags", strings.Join(windowsX86ClangCppflags, " "))
+	pctx.StaticVariable("WindowsX8664ClangCppflags", strings.Join(windowsX8664ClangCppflags, " "))
 
 	pctx.StaticVariable("WindowsIncludeFlags", strings.Join(windowsIncludeFlags, " "))
 }
@@ -168,24 +213,44 @@ func (t *toolchainWindows) ClangSupported() bool {
 	return false
 }
 
-func (t *toolchainWindows) ClangTriple() string {
-	panic("Clang is not supported under mingw")
+func (t *toolchainWindowsX86) ClangTriple() string {
+	return "i686-windows-gnu"
 }
 
-func (t *toolchainWindows) ClangCflags() string {
-	panic("Clang is not supported under mingw")
+func (t *toolchainWindowsX8664) ClangTriple() string {
+	return "x86_64-pc-windows-gnu"
 }
 
-func (t *toolchainWindows) ClangCppflags() string {
-	panic("Clang is not supported under mingw")
+func (t *toolchainWindowsX86) ClangCflags() string {
+	return "${config.WindowsClangCflags} ${config.WindowsX86ClangCflags}"
 }
 
-func (t *toolchainWindows) ClangLdflags() string {
-	panic("Clang is not supported under mingw")
+func (t *toolchainWindowsX8664) ClangCflags() string {
+	return "${config.WindowsClangCflags} ${config.WindowsX8664ClangCflags}"
 }
 
-func (t *toolchainWindows) ClangLldflags() string { // TODO
-	panic("Clang is not supported under mingw")
+func (t *toolchainWindowsX86) ClangCppflags() string {
+	return "${config.WindowsClangCppflags} ${config.WindowsX86ClangCppflags}"
+}
+
+func (t *toolchainWindowsX8664) ClangCppflags() string {
+	return "${config.WindowsClangCppflags} ${config.WindowsX8664ClangCppflags}"
+}
+
+func (t *toolchainWindowsX86) ClangLdflags() string {
+	return "${config.WindowsClangLdflags} ${config.WindowsX86ClangLdflags}"
+}
+
+func (t *toolchainWindowsX86) ClangLldflags() string {
+	return "${config.WindowsClangLldflags} ${config.WindowsX86ClangLldflags}"
+}
+
+func (t *toolchainWindowsX8664) ClangLdflags() string {
+	return "${config.WindowsClangLdflags} ${config.WindowsX8664ClangLdflags}"
+}
+
+func (t *toolchainWindowsX8664) ClangLldflags() string {
+	return "${config.WindowsClangLldflags} ${config.WindowsX8664ClangLldflags}"
 }
 
 func (t *toolchainWindows) ShlibSuffix() string {

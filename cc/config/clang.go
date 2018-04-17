@@ -63,6 +63,9 @@ var ClangUnknownCflags = sorted([]string{
 	"-fno-inline-functions-called-once",
 	"-mfpmath=sse",
 	"-mbionic",
+
+	// windows
+	"--enable-stdcall-fixup",
 })
 
 // Ldflags that should be filtered out when linking with clang lld
