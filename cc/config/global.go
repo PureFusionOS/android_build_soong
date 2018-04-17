@@ -46,8 +46,8 @@ var (
 		"-fno-exceptions",
 		"-Wno-multichar",
 
-		"-O2",
-		"-g",
+		"-O3",
+		"-g0",
 
 		"-fno-strict-aliasing",
 	}
@@ -94,7 +94,7 @@ var (
 
 	hostGlobalLdflags = []string{}
 
-	hostGlobalLldflags = []string{}
+	hostGlobalLldflags = []string{"-fuse-ld=lld"}
 
 	commonGlobalCppflags = []string{
 		"-Wsign-promo",
