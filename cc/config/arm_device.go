@@ -48,8 +48,9 @@ var (
 	}
 
 	armThumbCflags = []string{
+		"-O3",
+		"-funroll-loops",
 		"-mthumb",
-		"-Os",
 	}
 
 	armArchVariantCflags = map[string][]string{
