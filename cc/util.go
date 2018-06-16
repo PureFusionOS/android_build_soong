@@ -115,6 +115,7 @@ func flagsToBuilderFlags(in Flags) builderFlags {
 		yasmFlags:     strings.Join(in.YasmFlags, " "),
 		toolchain:     in.Toolchain,
 		clang:         in.Clang,
+		polly:         in.Polly,
 		coverage:      in.Coverage,
 		tidy:          in.Tidy,
 		sAbiDump:      in.SAbiDump,

@@ -227,6 +227,7 @@ type builderFlags struct {
 	rsFlags       string
 	toolchain     config.Toolchain
 	clang         bool
+	polly         bool
 	tidy          bool
 	coverage      bool
 	sAbiDump      bool
@@ -389,8 +390,12 @@ func TransformSourceToObj(ctx android.ModuleContext, subdir string, srcFiles and
 
 		ccDesc := ccCmd
 
+		var extraFlags string
 		if flags.clang {
 			ccCmd = "${config.ClangBin}/" + ccCmd
+			if flags.polly {
+				extraFlags = " ${config.PollyFlags}"
+			}
 		} else {
 			ccCmd = gccCmd(flags.toolchain, ccCmd)
 		}
@@ -410,7 +415,7 @@ func TransformSourceToObj(ctx android.ModuleContext, subdir string, srcFiles and
 			Input:           srcFile,
 			OrderOnly:       deps,
 			Args: map[string]string{
-				"cFlags": moduleCflags,
+				"cFlags": moduleCflags + extraFlags,
 				"ccCmd":  ccCmd,
 			},
 		})

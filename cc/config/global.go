@@ -92,6 +92,21 @@ var (
 			"-fuse-ld=lld",
 	}...)
 
+	pollyCflags = []string{
+		"-mllvm", "-polly ",
+		"-mllvm", "-polly-parallel", "-lgomp",
+		"-mllvm", "-polly-ast-use-context",
+		"-mllvm", "-polly-vectorizer=stripmine",
+		"-mllvm", "-polly-opt-fusion=max",
+		"-mllvm", "-polly-opt-maximize-bands=yes",
+		"-mllvm", "-polly-run-dce",
+		"-mllvm", "-polly-position=after-loopopt",
+		"-mllvm", "-polly-run-inliner",
+		"-mllvm", "-polly-detect-keep-going",
+		"-mllvm", "-polly-opt-simplify-deps=no",
+		"-mllvm", "-polly-rtc-max-arrays-per-group=40",
+	}
+
 	hostGlobalCflags = []string{}
 
 	hostGlobalLdflags = []string{}
@@ -117,6 +132,7 @@ var (
 	GccCppStdVersion          = "gnu++11"
 	ExperimentalCStdVersion   = "gnu11"
 	ExperimentalCppStdVersion = "gnu++1z"
+	Polly  = true
 
 	NdkMaxPrebuiltVersionInt = 24
 
@@ -200,6 +216,7 @@ func init() {
 	})
 	pctx.StaticVariable("ClangAsanLibDir", "${ClangPath}/lib64/clang/7.0.0/lib/linux")
 	pctx.StaticVariable("LLVMGoldPlugin", "${ClangPath}/lib64/LLVMgold.so")
+	pctx.StaticVariable("PollyFlags", strings.Join(pollyCflags, " "))
 
 	// These are tied to the version of LLVM directly in external/llvm, so they might trail the host prebuilts
 	// being used for the rest of the build process.
