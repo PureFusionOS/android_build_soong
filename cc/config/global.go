@@ -44,11 +44,11 @@ var (
 		"-fdiagnostics-color",
 
 		// TARGET_ERROR_FLAGS
-		"-Werror=return-type",
-		"-Werror=non-virtual-dtor",
-		"-Werror=address",
-		"-Werror=sequence-point",
-		"-Werror=date-time",
+		"-Wno-error=return-type",
+		"-Wno-error=non-virtual-dtor",
+		"-Wno-error=address",
+		"-Wno-error=sequence-point",
+		"-Wno-error=date-time",
 	}
 
 	hostGlobalCflags = []string{}
@@ -58,8 +58,8 @@ var (
 	}
 
 	noOverrideGlobalCflags = []string{
-		"-Werror=int-to-pointer-cast",
-		"-Werror=pointer-to-int-cast",
+		"-Wno-error=int-to-pointer-cast",
+		"-Wno-error=pointer-to-int-cast",
 	}
 
 	IllegalFlags = []string{
@@ -76,8 +76,8 @@ var (
 
 	// prebuilts/clang default settings.
 	ClangDefaultBase         = "prebuilts/clang/host"
-	ClangDefaultVersion      = "clang-4053586"
-	ClangDefaultShortVersion = "5.0"
+	ClangDefaultVersion      = "7.0"
+	ClangDefaultShortVersion = "7.0"
 )
 
 var pctx = android.NewPackageContext("android/soong/cc/config")
@@ -128,35 +128,35 @@ func init() {
 
 	pctx.SourcePathVariable("ClangDefaultBase", ClangDefaultBase)
 	pctx.VariableFunc("ClangBase", func(config interface{}) (string, error) {
-		if override := config.(android.Config).Getenv("LLVM_PREBUILTS_BASE"); override != "" {
+		if override := config.(android.Config).Getenv("7.0"); override != "" {
 			return override, nil
 		}
 		return "${ClangDefaultBase}", nil
 	})
 	pctx.VariableFunc("ClangVersion", func(config interface{}) (string, error) {
-		if override := config.(android.Config).Getenv("LLVM_PREBUILTS_VERSION"); override != "" {
+		if override := config.(android.Config).Getenv("7.0"); override != "" {
 			return override, nil
 		}
-		return ClangDefaultVersion, nil
+		return "7.0", nil
 	})
 	pctx.StaticVariable("ClangPath", "${ClangBase}/${HostPrebuiltTag}/${ClangVersion}")
 	pctx.StaticVariable("ClangBin", "${ClangPath}/bin")
 
 	pctx.VariableFunc("ClangShortVersion", func(config interface{}) (string, error) {
-		if override := config.(android.Config).Getenv("LLVM_RELEASE_VERSION"); override != "" {
+		if override := config.(android.Config).Getenv("7.0"); override != "" {
 			return override, nil
 		}
-		return ClangDefaultShortVersion, nil
+		return "7.0", nil
 	})
-	pctx.StaticVariable("ClangAsanLibDir", "${ClangPath}/lib64/clang/${ClangShortVersion}/lib/linux")
+	pctx.StaticVariable("ClangAsanLibDir", "${ClangPath}/lib64/clang/7.0.0/lib/linux")
 
 	// These are tied to the version of LLVM directly in external/llvm, so they might trail the host prebuilts
 	// being used for the rest of the build process.
 	pctx.SourcePathVariable("RSClangBase", "prebuilts/clang/host")
-	pctx.SourcePathVariable("RSClangVersion", "clang-3289846")
-	pctx.SourcePathVariable("RSReleaseVersion", "3.8")
+	pctx.SourcePathVariable("RSClangVersion", "7.0")
+	pctx.SourcePathVariable("RSReleaseVersion", "7.0")
 	pctx.StaticVariable("RSLLVMPrebuiltsPath", "${RSClangBase}/${HostPrebuiltTag}/${RSClangVersion}/bin")
-	pctx.StaticVariable("RSIncludePath", "${RSLLVMPrebuiltsPath}/../lib64/clang/${RSReleaseVersion}/include")
+	pctx.StaticVariable("RSIncludePath", "${RSClangBase}/${HostPrebuiltTag}/${RSClangVersion}/lib64/clang/7.0.0/include")
 
 	pctx.PrefixedExistentPathsForSourcesVariable("RsGlobalIncludes", "-I",
 		[]string{
