@@ -32,6 +32,9 @@ func runNinja(ctx Context, config Config) {
 		"-d", "keepdepfile",
 	}
 
+	// Enable color output
+	args = append(args, "-c")
+
 	args = append(args, config.NinjaArgs()...)
 
 	var parallel int
