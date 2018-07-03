@@ -197,13 +197,13 @@ func init() {
 
 	pctx.SourcePathVariable("ClangDefaultBase", ClangDefaultBase)
 	pctx.VariableFunc("ClangBase", func(config interface{}) (string, error) {
-		if override := config.(android.Config).Getenv("DRAGONTC_VERSION"); override != "" {
+		if override := config.(android.Config).Getenv("7.0"); override != "" {
 			return override, nil
 		}
 		return "${ClangDefaultBase}", nil
 	})
 	pctx.VariableFunc("ClangVersion", func(config interface{}) (string, error) {
-		if override := config.(android.Config).Getenv("DRAGONTC_VERSION"); override != "" {
+		if override := config.(android.Config).Getenv("7.0"); override != "" {
 			return override, nil
 		}
 		return "7.0", nil
@@ -212,7 +212,7 @@ func init() {
 	pctx.StaticVariable("ClangBin", "${ClangPath}/bin")
 
 	pctx.VariableFunc("ClangShortVersion", func(config interface{}) (string, error) {
-		if override := config.(android.Config).Getenv("DRAGONTC_VERSION"); override != "" {
+		if override := config.(android.Config).Getenv("7.0"); override != "" {
 			return override, nil
 		}
 		return "7.0", nil
