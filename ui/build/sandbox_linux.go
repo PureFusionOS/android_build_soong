@@ -19,7 +19,7 @@ type Sandbox bool
 const (
 	noSandbox     = false
 	globalSandbox = false
-	dumpvarsSandbox   = false
+	makeSandbox   = false
 	soongSandbox  = false
 	katiSandbox   = false
 )

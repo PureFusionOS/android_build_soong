@@ -75,7 +75,7 @@ func runKati(ctx Context, config Config) {
 		"--color_warnings",
 		"--gen_all_targets",
 		"--werror_find_emulator",
-		"-f", "build/make/core/main.mk",
+		"-f", "build/core/main.mk",
 	}
 
 	if !config.Environment().IsFalse("KATI_EMULATE_FIND") {
