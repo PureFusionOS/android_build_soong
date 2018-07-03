@@ -61,6 +61,8 @@ func (c *androidMkSingleton) GenerateBuildActions(ctx blueprint.SingletonContext
 		return
 	}
 
+	ctx.SetNinjaBuildDir(pctx, filepath.Join(config.buildDir, ".."))
+
 	var androidMkModulesList []Module
 
 	ctx.VisitAllModules(func(module blueprint.Module) {
