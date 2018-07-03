@@ -19,11 +19,13 @@ package java
 // functions.
 
 import (
+	"path/filepath"
 	"strings"
 
-	"github.com/google/blueprint"
-
 	"android/soong/android"
+
+	"github.com/google/blueprint"
+	_ "github.com/google/blueprint/bootstrap"
 )
 
 var (
@@ -37,51 +39,63 @@ var (
 	// read from directly using @<listfile>)
 	javac = pctx.AndroidGomaStaticRule("javac",
 		blueprint.RuleParams{
-			Command: `rm -rf "$outDir" "$annoDir" && mkdir -p "$outDir" "$annoDir" && ` +
-				`${config.JavacWrapper}${config.JavacCmd} ${config.JavacHeapFlags} ${config.CommonJdkFlags} ` +
-				`$javacFlags $bootClasspath $classpath ` +
-				`-source $javaVersion -target $javaVersion ` +
-				`-d $outDir -s $annoDir @$out.rsp && ` +
-				`${config.SoongZipCmd} -jar -o $out -C $outDir -D $outDir`,
-			CommandDeps:    []string{"${config.JavacCmd}", "${config.SoongZipCmd}"},
+			Command: `rm -rf "$outDir" && mkdir -p "$outDir" && ` +
+				`${JavacWrapper}$javacCmd ` +
+				`-encoding UTF-8 $javacFlags $bootClasspath $classpath ` +
+				`-extdirs "" -d $outDir @$out.rsp || ( rm -rf "$outDir"; exit 41 ) && ` +
+				`find $outDir -name "*.class" > $out`,
 			Rspfile:        "$out.rsp",
 			RspfileContent: "$in",
 		},
-		"javacFlags", "bootClasspath", "classpath", "outDir", "annoDir", "javaVersion")
+		"javacCmd", "javacFlags", "bootClasspath", "classpath", "outDir")
 
 	jar = pctx.AndroidStaticRule("jar",
 		blueprint.RuleParams{
-			Command:     `${config.SoongZipCmd} -jar -o $out $jarArgs`,
-			CommandDeps: []string{"${config.SoongZipCmd}"},
+			Command:     `$jarCmd -o $out $jarArgs`,
+			CommandDeps: []string{"$jarCmd"},
 		},
-		"jarArgs")
-
-	combineJar = pctx.AndroidStaticRule("combineJar",
-		blueprint.RuleParams{
-			Command:     `${config.MergeZipsCmd} -j $out $in`,
-			CommandDeps: []string{"${config.MergeZipsCmd}"},
-		},
-		"outDir")
+		"jarCmd", "jarArgs")
 
 	dx = pctx.AndroidStaticRule("dx",
 		blueprint.RuleParams{
 			Command: `rm -rf "$outDir" && mkdir -p "$outDir" && ` +
-				`${config.DxCmd} --dex --output=$outDir $dxFlags $in || ( rm -rf "$outDir"; exit 41 ) && ` +
-				`find "$outDir" -name "classes*.dex" | sort > $out`,
-			CommandDeps: []string{"${config.DxCmd}"},
+				`$dxCmd --dex --output=$outDir $dxFlags $in || ( rm -rf "$outDir"; exit 41 ) && ` +
+				`find "$outDir" -name "classes*.dex" > $out`,
+			CommandDeps: []string{"$dxCmd"},
 		},
 		"outDir", "dxFlags")
 
 	jarjar = pctx.AndroidStaticRule("jarjar",
 		blueprint.RuleParams{
-			Command:     "${config.JavaCmd} -jar ${config.JarjarCmd} process $rulesFile $in $out",
-			CommandDeps: []string{"${config.JavaCmd}", "${config.JarjarCmd}", "$rulesFile"},
+			Command:     "java -jar $jarjarCmd process $rulesFile $in $out",
+			CommandDeps: []string{"$jarjarCmd", "$rulesFile"},
 		},
 		"rulesFile")
+
+	extractPrebuilt = pctx.AndroidStaticRule("extractPrebuilt",
+		blueprint.RuleParams{
+			Command: `rm -rf $outDir && unzip -qo $in -d $outDir && ` +
+				`find $outDir -name "*.class" > $classFile && ` +
+				`find $outDir -type f -a \! -name "*.class" -a \! -name "MANIFEST.MF" > $resourceFile || ` +
+				`(rm -rf $outDir; exit 42)`,
+		},
+		"outDir", "classFile", "resourceFile")
 )
 
 func init() {
-	pctx.Import("android/soong/java/config")
+	pctx.Import("github.com/google/blueprint/bootstrap")
+	pctx.StaticVariable("commonJdkFlags", "-source 1.7 -target 1.7 -Xmaxerrs 9999999")
+	pctx.StaticVariable("javacCmd", "javac -J-Xmx1024M $commonJdkFlags")
+	pctx.StaticVariable("jarCmd", filepath.Join("${bootstrap.ToolDir}", "soong_zip"))
+	pctx.HostBinToolVariable("dxCmd", "dx")
+	pctx.HostJavaToolVariable("jarjarCmd", "jarjar.jar")
+
+	pctx.VariableFunc("JavacWrapper", func(config interface{}) (string, error) {
+		if override := config.(android.Config).Getenv("JAVAC_WRAPPER"); override != "" {
+			return override + " ", nil
+		}
+		return "", nil
+	})
 }
 
 type javaBuilderFlags struct {
@@ -90,7 +104,6 @@ type javaBuilderFlags struct {
 	bootClasspath string
 	classpath     string
 	aidlFlags     string
-	javaVersion   string
 }
 
 type jarSpec struct {
@@ -101,12 +114,11 @@ func (j jarSpec) soongJarArgs() string {
 	return "-C " + j.dir.String() + " -l " + j.fileList.String()
 }
 
-func TransformJavaToClasses(ctx android.ModuleContext, srcFiles, srcFileLists android.Paths,
-	flags javaBuilderFlags, deps android.Paths) android.ModuleOutPath {
+func TransformJavaToClasses(ctx android.ModuleContext, srcFiles android.Paths, srcFileLists android.Paths,
+	flags javaBuilderFlags, deps android.Paths) jarSpec {
 
 	classDir := android.PathForModuleOut(ctx, "classes")
-	annoDir := android.PathForModuleOut(ctx, "anno")
-	classJar := android.PathForModuleOut(ctx, "classes.jar")
+	classFileList := android.PathForModuleOut(ctx, "classes.list")
 
 	javacFlags := flags.javacFlags + android.JoinWithPrefix(srcFileLists.Strings(), "@")
 
@@ -115,7 +127,7 @@ func TransformJavaToClasses(ctx android.ModuleContext, srcFiles, srcFileLists an
 	ctx.ModuleBuild(pctx, android.ModuleBuildParams{
 		Rule:        javac,
 		Description: "javac",
-		Output:      classJar,
+		Output:      classFileList,
 		Inputs:      srcFiles,
 		Implicits:   deps,
 		Args: map[string]string{
@@ -123,22 +135,21 @@ func TransformJavaToClasses(ctx android.ModuleContext, srcFiles, srcFileLists an
 			"bootClasspath": flags.bootClasspath,
 			"classpath":     flags.classpath,
 			"outDir":        classDir.String(),
-			"annoDir":       annoDir.String(),
-			"javaVersion":   flags.javaVersion,
 		},
 	})
 
-	return classJar
+	return jarSpec{classFileList, classDir}
 }
 
-func TransformResourcesToJar(ctx android.ModuleContext, resources []jarSpec,
-	manifest android.OptionalPath, deps android.Paths) android.Path {
+func TransformClassesToJar(ctx android.ModuleContext, classes []jarSpec,
+	manifest android.OptionalPath) android.Path {
 
-	outputFile := android.PathForModuleOut(ctx, "res.jar")
+	outputFile := android.PathForModuleOut(ctx, "classes-full-debug.jar")
 
+	deps := android.Paths{}
 	jarArgs := []string{}
 
-	for _, j := range resources {
+	for _, j := range classes {
 		deps = append(deps, j.fileList)
 		jarArgs = append(jarArgs, j.soongJarArgs())
 	}
@@ -156,24 +167,6 @@ func TransformResourcesToJar(ctx android.ModuleContext, resources []jarSpec,
 		Args: map[string]string{
 			"jarArgs": strings.Join(jarArgs, " "),
 		},
-	})
-
-	return outputFile
-}
-
-func TransformJarsToJar(ctx android.ModuleContext, stem string, jars android.Paths) android.Path {
-
-	outputFile := android.PathForModuleOut(ctx, stem)
-
-	if len(jars) == 1 {
-		return jars[0]
-	}
-
-	ctx.ModuleBuild(pctx, android.ModuleBuildParams{
-		Rule:        combineJar,
-		Description: "combine jars",
-		Output:      outputFile,
-		Inputs:      jars,
 	})
 
 	return outputFile
@@ -227,7 +220,7 @@ func TransformDexToJavaLib(ctx android.ModuleContext, resources []jarSpec,
 	return outputFile
 }
 
-func TransformJarJar(ctx android.ModuleContext, classesJar android.Path, rulesFile android.Path) android.ModuleOutPath {
+func TransformJarJar(ctx android.ModuleContext, classesJar android.Path, rulesFile android.Path) android.Path {
 	outputFile := android.PathForModuleOut(ctx, "classes-jarjar.jar")
 	ctx.ModuleBuild(pctx, android.ModuleBuildParams{
 		Rule:        jarjar,
@@ -241,4 +234,26 @@ func TransformJarJar(ctx android.ModuleContext, classesJar android.Path, rulesFi
 	})
 
 	return outputFile
+}
+
+func TransformPrebuiltJarToClasses(ctx android.ModuleContext,
+	prebuilt android.Path) (classJarSpec, resourceJarSpec jarSpec) {
+
+	classDir := android.PathForModuleOut(ctx, "extracted/classes")
+	classFileList := android.PathForModuleOut(ctx, "extracted/classes.list")
+	resourceFileList := android.PathForModuleOut(ctx, "extracted/resources.list")
+
+	ctx.ModuleBuild(pctx, android.ModuleBuildParams{
+		Rule:        extractPrebuilt,
+		Description: "extract classes",
+		Outputs:     android.WritablePaths{classFileList, resourceFileList},
+		Input:       prebuilt,
+		Args: map[string]string{
+			"outDir":       classDir.String(),
+			"classFile":    classFileList.String(),
+			"resourceFile": resourceFileList.String(),
+		},
+	})
+
+	return jarSpec{classFileList, classDir}, jarSpec{resourceFileList, classDir}
 }

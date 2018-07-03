@@ -123,8 +123,8 @@ func TestPrebuilts(t *testing.T) {
 	for _, test := range prebuiltsTests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := NewTestContext()
-			ctx.PreArchMutators(RegisterPrebuiltsPreArchMutators)
-			ctx.PostDepsMutators(RegisterPrebuiltsPostDepsMutators)
+			ctx.PreArchMutators(registerPrebuiltsPreArchMutators)
+			ctx.PostDepsMutators(registerPrebuiltsPostDepsMutators)
 			ctx.RegisterModuleType("prebuilt", ModuleFactoryAdaptor(newPrebuiltModule))
 			ctx.RegisterModuleType("source", ModuleFactoryAdaptor(newSourceModule))
 			ctx.Register()
@@ -151,7 +151,7 @@ func TestPrebuilts(t *testing.T) {
 				}
 				if p, ok := m.(*prebuiltModule); ok {
 					dependsOnPrebuiltModule = true
-					if !p.Prebuilt().properties.UsePrebuilt {
+					if !p.Prebuilt().Properties.UsePrebuilt {
 						t.Errorf("dependency on prebuilt module not marked used")
 					}
 				}
@@ -180,16 +180,12 @@ func TestPrebuilts(t *testing.T) {
 
 type prebuiltModule struct {
 	ModuleBase
-	prebuilt   Prebuilt
-	properties struct {
-		Srcs []string
-	}
+	prebuilt Prebuilt
 }
 
 func newPrebuiltModule() Module {
 	m := &prebuiltModule{}
-	m.AddProperties(&m.properties)
-	InitPrebuiltModule(m, &m.properties.Srcs)
+	m.AddProperties(&m.prebuilt.Properties)
 	InitAndroidModule(m)
 	return m
 }

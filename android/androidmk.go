@@ -33,7 +33,7 @@ func init() {
 }
 
 type AndroidMkDataProvider interface {
-	AndroidMk() AndroidMkData
+	AndroidMk() (AndroidMkData, error)
 	BaseModuleName() string
 }
 
@@ -43,14 +43,10 @@ type AndroidMkData struct {
 	OutputFile OptionalPath
 	Disabled   bool
 
-	Custom func(w io.Writer, name, prefix, moduleDir string, data AndroidMkData)
+	Custom func(w io.Writer, name, prefix, moduleDir string) error
 
-	Extra []AndroidMkExtraFunc
-
-	preamble bytes.Buffer
+	Extra []func(w io.Writer, outputFile Path) error
 }
-
-type AndroidMkExtraFunc func(w io.Writer, outputFile Path)
 
 func AndroidMkSingleton() blueprint.Singleton {
 	return &androidMkSingleton{}
@@ -161,39 +157,58 @@ func translateAndroidMkModule(ctx blueprint.SingletonContext, w io.Writer, mod b
 		return nil
 	}
 
-	data := provider.AndroidMk()
+	data, err := provider.AndroidMk()
+	if err != nil {
+		return err
+	}
 
 	// Make does not understand LinuxBionic
 	if amod.Os() == LinuxBionic {
 		return nil
 	}
 
-	prefix := ""
-	if amod.ArchSpecific() {
-		switch amod.Os().Class {
-		case Host:
-			prefix = "HOST_"
-		case HostCross:
-			prefix = "HOST_CROSS_"
-		case Device:
-			prefix = "TARGET_"
-
-		}
-
-		config := ctx.Config().(Config)
-		if amod.Arch().ArchType != config.Targets[amod.Os().Class][0].Arch.ArchType {
-			prefix = "2ND_" + prefix
-		}
+	if data.SubName != "" {
+		name += data.SubName
 	}
 
-	fmt.Fprintln(&data.preamble, "\ninclude $(CLEAR_VARS)")
-	fmt.Fprintln(&data.preamble, "LOCAL_PATH :=", filepath.Dir(ctx.BlueprintFile(mod)))
-	fmt.Fprintln(&data.preamble, "LOCAL_MODULE :=", name+data.SubName)
-	fmt.Fprintln(&data.preamble, "LOCAL_MODULE_CLASS :=", data.Class)
-	fmt.Fprintln(&data.preamble, "LOCAL_PREBUILT_MODULE_FILE :=", data.OutputFile.String())
+	if data.Custom != nil {
+		prefix := ""
+		if amod.ArchSpecific() {
+			switch amod.Os().Class {
+			case Host:
+				prefix = "HOST_"
+			case HostCross:
+				prefix = "HOST_CROSS_"
+			case Device:
+				prefix = "TARGET_"
+
+			}
+
+			config := ctx.Config().(Config)
+			if amod.Arch().ArchType != config.Targets[amod.Os().Class][0].Arch.ArchType {
+				prefix = "2ND_" + prefix
+			}
+		}
+
+		return data.Custom(w, name, prefix, filepath.Dir(ctx.BlueprintFile(mod)))
+	}
+
+	if data.Disabled {
+		return nil
+	}
+
+	if !data.OutputFile.Valid() {
+		return err
+	}
+
+	fmt.Fprintln(w, "\ninclude $(CLEAR_VARS)")
+	fmt.Fprintln(w, "LOCAL_PATH :=", filepath.Dir(ctx.BlueprintFile(mod)))
+	fmt.Fprintln(w, "LOCAL_MODULE :=", name)
+	fmt.Fprintln(w, "LOCAL_MODULE_CLASS :=", data.Class)
+	fmt.Fprintln(w, "LOCAL_PREBUILT_MODULE_FILE :=", data.OutputFile.String())
 
 	if len(amod.commonProperties.Required) > 0 {
-		fmt.Fprintln(&data.preamble, "LOCAL_REQUIRED_MODULES := "+strings.Join(amod.commonProperties.Required, " "))
+		fmt.Fprintln(w, "LOCAL_REQUIRED_MODULES := "+strings.Join(amod.commonProperties.Required, " "))
 	}
 
 	archStr := amod.Arch().ArchType.String()
@@ -202,71 +217,51 @@ func translateAndroidMkModule(ctx blueprint.SingletonContext, w io.Writer, mod b
 	case Host:
 		// Make cannot identify LOCAL_MODULE_HOST_ARCH:= common.
 		if archStr != "common" {
-			fmt.Fprintln(&data.preamble, "LOCAL_MODULE_HOST_ARCH :=", archStr)
+			fmt.Fprintln(w, "LOCAL_MODULE_HOST_ARCH :=", archStr)
 		}
 		host = true
 	case HostCross:
 		// Make cannot identify LOCAL_MODULE_HOST_CROSS_ARCH:= common.
 		if archStr != "common" {
-			fmt.Fprintln(&data.preamble, "LOCAL_MODULE_HOST_CROSS_ARCH :=", archStr)
+			fmt.Fprintln(w, "LOCAL_MODULE_HOST_CROSS_ARCH :=", archStr)
 		}
 		host = true
 	case Device:
 		// Make cannot identify LOCAL_MODULE_TARGET_ARCH:= common.
 		if archStr != "common" {
-			fmt.Fprintln(&data.preamble, "LOCAL_MODULE_TARGET_ARCH :=", archStr)
+			fmt.Fprintln(w, "LOCAL_MODULE_TARGET_ARCH :=", archStr)
 		}
 
 		if len(amod.commonProperties.Logtags) > 0 {
-			fmt.Fprintln(&data.preamble, "LOCAL_LOGTAGS_FILES := ", strings.Join(amod.commonProperties.Logtags, " "))
+			fmt.Fprintln(w, "LOCAL_LOGTAGS_FILES := ", strings.Join(amod.commonProperties.Logtags, " "))
 		}
 		if len(amod.commonProperties.Init_rc) > 0 {
-			fmt.Fprintln(&data.preamble, "LOCAL_INIT_RC := ", strings.Join(amod.commonProperties.Init_rc, " "))
+			fmt.Fprintln(w, "LOCAL_INIT_RC := ", strings.Join(amod.commonProperties.Init_rc, " "))
 		}
 		if amod.commonProperties.Proprietary {
-			fmt.Fprintln(&data.preamble, "LOCAL_PROPRIETARY_MODULE := true")
+			fmt.Fprintln(w, "LOCAL_PROPRIETARY_MODULE := true")
 		}
 		if amod.commonProperties.Vendor {
-			fmt.Fprintln(&data.preamble, "LOCAL_VENDOR_MODULE := true")
+			fmt.Fprintln(w, "LOCAL_VENDOR_MODULE := true")
 		}
 		if amod.commonProperties.Owner != nil {
-			fmt.Fprintln(&data.preamble, "LOCAL_MODULE_OWNER :=", *amod.commonProperties.Owner)
-		}
-		if amod.commonProperties.Notice != nil {
-			fmt.Fprintln(&data.preamble, "LOCAL_NOTICE_FILE :=", "$(LOCAL_PATH)/"+*amod.commonProperties.Notice)
+			fmt.Fprintln(w, "LOCAL_MODULE_OWNER :=", *amod.commonProperties.Owner)
 		}
 	}
 
 	if host {
-		fmt.Fprintln(&data.preamble, "LOCAL_MODULE_HOST_OS :=", amod.Os().String())
-		fmt.Fprintln(&data.preamble, "LOCAL_IS_HOST_MODULE := true")
+		fmt.Fprintln(w, "LOCAL_MODULE_HOST_OS :=", amod.Os().String())
+		fmt.Fprintln(w, "LOCAL_IS_HOST_MODULE := true")
 	}
-
-	blueprintDir := filepath.Dir(ctx.BlueprintFile(mod))
-
-	if data.Custom != nil {
-		data.Custom(w, name, prefix, blueprintDir, data)
-	} else {
-		WriteAndroidMkData(w, data)
-	}
-
-	return nil
-}
-
-func WriteAndroidMkData(w io.Writer, data AndroidMkData) {
-	if data.Disabled {
-		return
-	}
-
-	if !data.OutputFile.Valid() {
-		return
-	}
-
-	w.Write(data.preamble.Bytes())
 
 	for _, extra := range data.Extra {
-		extra(w, data.OutputFile.Path())
+		err = extra(w, data.OutputFile.Path())
+		if err != nil {
+			return err
+		}
 	}
 
 	fmt.Fprintln(w, "include $(BUILD_PREBUILT)")
+
+	return err
 }

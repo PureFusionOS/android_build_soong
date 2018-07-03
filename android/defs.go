@@ -47,14 +47,7 @@ var (
 	// A copy rule.
 	Cp = pctx.AndroidStaticRule("Cp",
 		blueprint.RuleParams{
-			Command:     "rm -f $out && cp $cpPreserveSymlinks $cpFlags $in $out",
-			Description: "cp $out",
-		},
-		"cpFlags")
-
-	CpExecutable = pctx.AndroidStaticRule("CpExecutable",
-		blueprint.RuleParams{
-			Command:     "rm -f $out && cp $cpPreserveSymlinks $cpFlags $in $out && chmod +x $out",
+			Command:     "cp $cpPreserveSymlinks $cpFlags $in $out",
 			Description: "cp $out",
 		},
 		"cpFlags")

@@ -83,8 +83,8 @@ type ModuleContext interface {
 	ExpandSourcesSubDir(srcFiles, excludes []string, subDir string) Paths
 	Glob(globPattern string, excludes []string) Paths
 
-	InstallExecutable(installPath OutputPath, name string, srcPath Path, deps ...Path) OutputPath
-	InstallFile(installPath OutputPath, name string, srcPath Path, deps ...Path) OutputPath
+	InstallFile(installPath OutputPath, srcPath Path, deps ...Path) OutputPath
+	InstallFileName(installPath OutputPath, name string, srcPath Path, deps ...Path) OutputPath
 	InstallSymlink(installPath OutputPath, name string, srcPath OutputPath) OutputPath
 	CheckbuildFile(srcPath Path)
 
@@ -161,9 +161,6 @@ type commonProperties struct {
 
 	// names of other modules to install if this module is installed
 	Required []string `android:"arch_variant"`
-
-	// relative path to a file to include in the list of notices for the device
-	Notice *string
 
 	// Set by TargetMutator
 	CompileTarget  Target `blueprint:"mutated"`
@@ -720,18 +717,8 @@ func (a *androidModuleContext) skipInstall(fullInstallPath OutputPath) bool {
 	return false
 }
 
-func (a *androidModuleContext) InstallFile(installPath OutputPath, name string, srcPath Path,
+func (a *androidModuleContext) InstallFileName(installPath OutputPath, name string, srcPath Path,
 	deps ...Path) OutputPath {
-	return a.installFile(installPath, name, srcPath, Cp, deps)
-}
-
-func (a *androidModuleContext) InstallExecutable(installPath OutputPath, name string, srcPath Path,
-	deps ...Path) OutputPath {
-	return a.installFile(installPath, name, srcPath, CpExecutable, deps)
-}
-
-func (a *androidModuleContext) installFile(installPath OutputPath, name string, srcPath Path,
-	rule blueprint.Rule, deps []Path) OutputPath {
 
 	fullInstallPath := installPath.Join(a, name)
 	a.module.base().hooks.runInstallHooks(a, fullInstallPath, false)
@@ -751,7 +738,7 @@ func (a *androidModuleContext) installFile(installPath OutputPath, name string, 
 		}
 
 		a.ModuleBuild(pctx, ModuleBuildParams{
-			Rule:        rule,
+			Rule:        Cp,
 			Description: "install " + fullInstallPath.Base(),
 			Output:      fullInstallPath,
 			Input:       srcPath,
@@ -764,6 +751,10 @@ func (a *androidModuleContext) installFile(installPath OutputPath, name string, 
 	}
 	a.checkbuildFiles = append(a.checkbuildFiles, srcPath)
 	return fullInstallPath
+}
+
+func (a *androidModuleContext) InstallFile(installPath OutputPath, srcPath Path, deps ...Path) OutputPath {
+	return a.InstallFileName(installPath, filepath.Base(srcPath.String()), srcPath, deps...)
 }
 
 func (a *androidModuleContext) InstallSymlink(installPath OutputPath, name string, srcPath OutputPath) OutputPath {

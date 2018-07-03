@@ -378,18 +378,6 @@ func (c *config) PlatformSdkVersion() string {
 	return strconv.Itoa(c.PlatformSdkVersionInt())
 }
 
-func (c *config) MinSupportedSdkVersion() int {
-	return 14
-}
-
-func (c *config) DefaultAppTargetSdkInt() int {
-	if Bool(c.ProductVariables.Platform_sdk_final) {
-		return c.PlatformSdkVersionInt()
-	} else {
-		return 10000
-	}
-}
-
 func (c *config) PlatformVersionAllCodenames() []string {
 	return c.ProductVariables.Platform_version_all_codenames
 }
@@ -424,10 +412,6 @@ func (c *config) AllowMissingDependencies() bool {
 
 func (c *config) DevicePrefer32BitExecutables() bool {
 	return Bool(c.ProductVariables.DevicePrefer32BitExecutables)
-}
-
-func (c *config) UnbundledBuild() bool {
-	return Bool(c.ProductVariables.Unbundled_build)
 }
 
 func (c *config) SkipDeviceInstall() bool {

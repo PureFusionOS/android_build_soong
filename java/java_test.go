@@ -20,7 +20,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -55,22 +54,17 @@ func testJava(t *testing.T, bp string) *android.TestContext {
 
 	ctx := android.NewTestContext()
 	ctx.RegisterModuleType("android_app", android.ModuleFactoryAdaptor(AndroidAppFactory))
-	ctx.RegisterModuleType("java_library", android.ModuleFactoryAdaptor(LibraryFactory))
-	ctx.RegisterModuleType("java_import", android.ModuleFactoryAdaptor(ImportFactory))
-	ctx.RegisterModuleType("java_defaults", android.ModuleFactoryAdaptor(defaultsFactory))
-	ctx.PreArchMutators(android.RegisterPrebuiltsPreArchMutators)
-	ctx.PreArchMutators(android.RegisterPrebuiltsPostDepsMutators)
-	ctx.PreArchMutators(android.RegisterDefaultsPreArchMutators)
+	ctx.RegisterModuleType("java_library", android.ModuleFactoryAdaptor(JavaLibraryFactory))
+	ctx.RegisterModuleType("java_prebuilt_library", android.ModuleFactoryAdaptor(JavaPrebuiltFactory))
 	ctx.Register()
 
-	extraModules := []string{"core-oj", "core-libart", "frameworks", "sdk_v14"}
+	extraModules := []string{"core-libart", "frameworks", "sdk_v14"}
 
 	for _, extra := range extraModules {
 		bp += fmt.Sprintf(`
 			java_library {
 				name: "%s",
-				srcs: ["a.java"],
-				no_standard_libs: true,
+				no_standard_libraries: true,
 			}
 		`, extra)
 	}
@@ -113,25 +107,20 @@ func TestSimple(t *testing.T) {
 		`)
 
 	javac := ctx.ModuleForTests("foo", "").Rule("javac")
-	combineJar := ctx.ModuleForTests("foo", "").Rule("combineJar")
+	jar := ctx.ModuleForTests("foo", "").Rule("jar")
 
 	if len(javac.Inputs) != 1 || javac.Inputs[0].String() != "a.java" {
 		t.Errorf(`foo inputs %v != ["a.java"]`, javac.Inputs)
 	}
 
-	bar := filepath.Join(buildDir, ".intermediates", "bar", "classes.jar")
-	baz := filepath.Join(buildDir, ".intermediates", "baz", "classes.jar")
-
+	bar := filepath.Join(buildDir, ".intermediates", "bar", "classes-full-debug.jar")
 	if !strings.Contains(javac.Args["classpath"], bar) {
 		t.Errorf("foo classpath %v does not contain %q", javac.Args["classpath"], bar)
 	}
 
-	if !strings.Contains(javac.Args["classpath"], baz) {
-		t.Errorf("foo classpath %v does not contain %q", javac.Args["classpath"], baz)
-	}
-
-	if len(combineJar.Inputs) != 2 || combineJar.Inputs[1].String() != baz {
-		t.Errorf("foo combineJar inputs %v does not contain %q", combineJar.Inputs, baz)
+	baz := filepath.Join(buildDir, ".intermediates", "baz", "classes.list")
+	if !strings.Contains(jar.Args["jarArgs"], baz) {
+		t.Errorf("foo jarArgs %v does not contain %q", jar.Args["jarArgs"], baz)
 	}
 }
 
@@ -180,11 +169,10 @@ func TestSdk(t *testing.T) {
 		bootclasspathLib
 	)
 
-	check := func(module string, depType depType, deps ...string) {
-		for i := range deps {
-			deps[i] = filepath.Join(buildDir, ".intermediates", deps[i], "classes.jar")
+	check := func(module, dep string, depType depType) {
+		if dep != "" {
+			dep = filepath.Join(buildDir, ".intermediates", dep, "classes-full-debug.jar")
 		}
-		dep := strings.Join(deps, ":")
 
 		javac := ctx.ModuleForTests(module, "").Rule("javac")
 
@@ -200,18 +188,12 @@ func TestSdk(t *testing.T) {
 			}
 		}
 
-		if !reflect.DeepEqual(javac.Implicits.Strings(), deps) {
-			t.Errorf("module %q implicits %q != %q", module, javac.Implicits.Strings(), deps)
+		if len(javac.Implicits) != 1 || javac.Implicits[0].String() != dep {
+			t.Errorf("module %q implicits != [%q]", dep)
 		}
 	}
 
-	check("foo1", bootclasspathLib, "core-oj", "core-libart")
-	check("foo2", bootclasspathLib, "core-oj", "core-libart")
-	// TODO(ccross): these need the arch mutator to run to work correctly
-	//check("foo3", bootclasspathLib, "sdk_v14")
-	//check("foo4", bootclasspathLib, "android_stubs_current")
-	//check("foo5", bootclasspathLib, "android_system_stubs_current")
-	//check("foo6", bootclasspathLib, "android_test_stubs_current")
+	check("foo1", "core-libart", bootclasspathLib)
 }
 
 func TestPrebuilts(t *testing.T) {
@@ -223,70 +205,28 @@ func TestPrebuilts(t *testing.T) {
 			static_libs: ["baz"],
 		}
 
-		java_import {
+		java_prebuilt_library {
 			name: "bar",
-			jars: ["a.jar"],
+			srcs: ["a.jar"],
 		}
 
-		java_import {
+		java_prebuilt_library {
 			name: "baz",
-			jars: ["b.jar"],
+			srcs: ["b.jar"],
 		}
 		`)
 
 	javac := ctx.ModuleForTests("foo", "").Rule("javac")
-	combineJar := ctx.ModuleForTests("foo", "").Rule("combineJar")
+	jar := ctx.ModuleForTests("foo", "").Rule("jar")
 
 	bar := "a.jar"
 	if !strings.Contains(javac.Args["classpath"], bar) {
 		t.Errorf("foo classpath %v does not contain %q", javac.Args["classpath"], bar)
 	}
 
-	if len(combineJar.Inputs) != 2 || combineJar.Inputs[1].String() != "b.jar" {
-		t.Errorf("foo combineJar inputs %v does not contain %q", combineJar.Inputs, "b.jar")
-	}
-}
-
-func TestDefaults(t *testing.T) {
-	ctx := testJava(t, `
-		java_defaults {
-			name: "defaults",
-			srcs: ["a.java"],
-			libs: ["bar"],
-			static_libs: ["baz"],
-		}
-
-		java_library {
-			name: "foo",
-			defaults: ["defaults"],
-		}
-
-		java_library {
-			name: "bar",
-			srcs: ["b.java"],
-		}
-
-		java_library {
-			name: "baz",
-			srcs: ["c.java"],
-		}
-		`)
-
-	javac := ctx.ModuleForTests("foo", "").Rule("javac")
-	combineJar := ctx.ModuleForTests("foo", "").Rule("combineJar")
-
-	if len(javac.Inputs) != 1 || javac.Inputs[0].String() != "a.java" {
-		t.Errorf(`foo inputs %v != ["a.java"]`, javac.Inputs)
-	}
-
-	bar := filepath.Join(buildDir, ".intermediates", "bar", "classes.jar")
-	if !strings.Contains(javac.Args["classpath"], bar) {
-		t.Errorf("foo classpath %v does not contain %q", javac.Args["classpath"], bar)
-	}
-
-	baz := filepath.Join(buildDir, ".intermediates", "baz", "classes.jar")
-	if len(combineJar.Inputs) != 2 || combineJar.Inputs[1].String() != baz {
-		t.Errorf("foo combineJar inputs %v does not contain %q", combineJar.Inputs, baz)
+	baz := filepath.Join(buildDir, ".intermediates", "baz", "extracted", "classes.list")
+	if !strings.Contains(jar.Args["jarArgs"], baz) {
+		t.Errorf("foo jarArgs %v does not contain %q", jar.Args["jarArgs"], baz)
 	}
 }
 

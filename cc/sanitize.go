@@ -438,10 +438,12 @@ func (sanitize *sanitize) flags(ctx ModuleContext, flags Flags) Flags {
 }
 
 func (sanitize *sanitize) AndroidMk(ctx AndroidMkContext, ret *android.AndroidMkData) {
-	ret.Extra = append(ret.Extra, func(w io.Writer, outputFile android.Path) {
+	ret.Extra = append(ret.Extra, func(w io.Writer, outputFile android.Path) error {
 		if sanitize.androidMkRuntimeLibrary != "" {
 			fmt.Fprintln(w, "LOCAL_SHARED_LIBRARIES += "+sanitize.androidMkRuntimeLibrary)
 		}
+
+		return nil
 	})
 }
 

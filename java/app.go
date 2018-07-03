@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/google/blueprint"
-	"github.com/google/blueprint/proptools"
 
 	"android/soong/android"
 )
@@ -69,7 +68,7 @@ type AndroidApp struct {
 func (a *AndroidApp) DepsMutator(ctx android.BottomUpMutatorContext) {
 	a.Module.deps(ctx)
 
-	if !proptools.Bool(a.properties.No_standard_libs) {
+	if !a.properties.No_standard_libraries {
 		switch a.deviceProperties.Sdk_version { // TODO: Res_sdk_version?
 		case "current", "system_current", "":
 			ctx.AddDependency(ctx.Module(), frameworkResTag, "framework-res")
@@ -151,7 +150,7 @@ func (a *AndroidApp) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 	}
 
 	a.outputFile = CreateAppPackage(ctx, aaptPackageFlags, a.outputFile, certificates)
-	ctx.InstallFile(android.PathForModuleInstall(ctx, "app"), ctx.ModuleName()+".apk", a.outputFile)
+	ctx.InstallFileName(android.PathForModuleInstall(ctx, "app"), ctx.ModuleName()+".apk", a.outputFile)
 }
 
 var aaptIgnoreFilenames = []string{
@@ -232,19 +231,18 @@ func (a *AndroidApp) aaptFlags(ctx android.ModuleContext) ([]string, android.Pat
 	aaptFlags = append(aaptFlags, android.JoinWithPrefix(resourceDirs.Strings(), "-S "))
 
 	ctx.VisitDirectDeps(func(module blueprint.Module) {
-		var depFiles android.Paths
+		var depFile android.OptionalPath
 		if sdkDep, ok := module.(sdkDependency); ok {
-			depFiles = sdkDep.ClasspathFiles()
-		} else if javaDep, ok := module.(Dependency); ok {
+			depFile = android.OptionalPathForPath(sdkDep.ClasspathFile())
+		} else if javaDep, ok := module.(JavaDependency); ok {
 			if ctx.OtherModuleName(module) == "framework-res" {
-				depFiles = android.Paths{javaDep.(*AndroidApp).exportPackage}
+				depFile = android.OptionalPathForPath(javaDep.(*AndroidApp).exportPackage)
 			}
 		}
-
-		for _, dep := range depFiles {
-			aaptFlags = append(aaptFlags, "-I "+dep.String())
+		if depFile.Valid() {
+			aaptFlags = append(aaptFlags, "-I "+depFile.String())
+			aaptDeps = append(aaptDeps, depFile.Path())
 		}
-		aaptDeps = append(aaptDeps, depFiles...)
 	})
 
 	sdkVersion := a.deviceProperties.Sdk_version
