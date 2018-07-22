@@ -140,9 +140,7 @@ func (stl *stl) flags(ctx ModuleContext, flags Flags) Flags {
 				flags.LdFlags = append(flags.LdFlags, hostDynamicGccLibs[ctx.Os()]...)
 			}
 		} else {
-			if ctx.Arch().ArchType == android.Arm {
-				flags.LdFlags = append(flags.LdFlags, "-Wl,--exclude-libs,libunwind_llvm.a")
-			}
+			// Nothing
 		}
 	case "libstdc++":
 		// Nothing
